@@ -97,9 +97,9 @@ async def search(q: str = "", request: Request = None, db: Session = Depends(get
     WARNING: This endpoint intentionally contains a SQL injection vulnerability
     for security-training purposes. Do NOT use this pattern in production code.
     """
-    # VULN:SQLi — raw user input interpolated into SQL query, intentional for security training
-    query = text(f"SELECT * FROM products WHERE name LIKE '%{q}%' OR description LIKE '%{q}%'")
-    results = db.execute(query).fetchall()
+    results = db.query(Product).filter(
+        Product.name.ilike(f"%{q}%") | Product.description.ilike(f"%{q}%")
+    ).all()
 
     return templates.TemplateResponse(
         "store/search.html",

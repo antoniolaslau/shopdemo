@@ -1,0 +1,8 @@
+{
+  "vuln_type": "SQL Injection",
+  "status": "fixed",
+  "fix_applied": "Replaced raw f-string SQL query using sqlalchemy text() (which interpolated user input directly into the SQL string) with a SQLAlchemy ORM filter using ilike() bound parameters in the /search endpoint handler. The vulnerable line `query = text(f\"SELECT * FROM products WHERE name LIKE '%{q}%' OR description LIKE '%{q}%'\")` and `db.execute(query).fetchall()` were removed and replaced with `db.query(Product).filter(Product.name.ilike(f\"%{q}%\") | Product.description.ilike(f\"%{q}%\")).all()`, which passes the search term as a bound parameter rather than interpolating it into the SQL string.",
+  "verification_curl": "curl -s 'http://localhost:8001/search?q=%27%20OR%201%3D1--'",
+  "verification_result": "HTTP 200 OK. Response body contains: Search results for: \"' OR 1=1--\" — No products matched your search. We couldn't find any products matching \"' OR 1=1--\". The injection payload returned zero results instead of all products, confirming the fix is effective. Legitimate search (q=phone) continues to return 1 product(s) found.",
+  "files_modified": ["routers/store.py"]
+}
