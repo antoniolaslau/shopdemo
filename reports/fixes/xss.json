@@ -1,0 +1,10 @@
+{
+  "vuln_type": "Stored XSS",
+  "status": "fixed",
+  "fix_applied": "Removed | safe filter from product.description in templates/admin/products.html line 112. Changed '{{ product.description|safe }}' to '{{ product.description }}' so Jinja2 auto-escaping encodes HTML special characters in user-supplied descriptions before rendering. Also removed the adjacent comment that marked the vulnerability.",
+  "verification_curl": "# Step 1: Obtain admin session cookie\ncurl -s -D - -X POST http://localhost:8001/auth/login \\\n  -H \"Content-Type: application/x-www-form-urlencoded\" \\\n  -d \"email=admin@shopdemo.com&password=admin123\" \\\n  | grep -i \"set-cookie\"\n\n# Step 2: POST XSS payload as product description\ncurl -s -X POST http://localhost:8001/admin/products \\\n  -H \"Content-Type: application/x-www-form-urlencoded\" \\\n  --cookie \"session=eyJ1c2VyX2lkIjogMSwgImlzX2FkbWluIjogdHJ1ZSwgImZsYXNoX21lc3NhZ2UiOiAiV2VsY29tZSBiYWNrLCBhZG1pbiEiLCAiZmxhc2hfdHlwZSI6ICJzdWNjZXNzIn0=.aatnrA.yQt6cCEtsWN13ilqKfhX4bRQChs\" \\\n  -d \"name=TestXSS&description=<script>alert('XSS')</script>&price=1.00&stock=1\"\n\n# Step 3: GET admin products page and inspect for escaped output\ncurl -s http://localhost:8001/admin/products \\\n  --cookie \"session=eyJ1c2VyX2lkIjogMSwgImlzX2FkbWluIjogdHJ1ZSwgImZsYXNoX21lc3NhZ2UiOiAiV2VsY29tZSBiYWNrLCBhZG1pbiEiLCAiZmxhc2hfdHlwZSI6ICJzdWNjZXNzIn0=.aatnrA.yQt6cCEtsWN13ilqKfhX4bRQChs\" \\\n  | grep -n \"script\\|alert\\|TestXSS\\|XSS\"",
+  "verification_result": "The GET /admin/products response (HTTP 200) contains the product 'TestXSS' with its description rendered as the fully HTML-escaped string '&lt;script&gt;alert(&#39;XSS&#39;)&lt;/script&gt;' (found at line 388 of the response body). The literal unescaped string '<script>alert('XSS')</script>' does NOT appear in the description cell. Jinja2 auto-escaping is active and encodes '<' as '&lt;', '>' as '&gt;', and single quotes as '&#39;'. The fix is confirmed effective — the payload cannot execute as JavaScript.",
+  "files_modified": [
+    "templates/admin/products.html"
+  ]
+}

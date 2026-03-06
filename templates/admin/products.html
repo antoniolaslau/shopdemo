@@ -108,8 +108,7 @@
                         <td class="ps-3 text-muted">{{ product.id }}</td>
                         <td class="fw-semibold">{{ product.name }}</td>
                         <td class="text-muted" style="max-width: 280px;">
-                            {# VULN:XSS — rendered raw, no escaping #}
-                            {{ product.description|safe }}
+                            {{ product.description }}
                         </td>
                         <td>${{ "%.2f"|format(product.price) }}</td>
                         <td>
