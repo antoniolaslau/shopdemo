@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — ShopDemo{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2 mb-0">
+        <i class="bi bi-speedometer2 me-2"></i>Admin Dashboard
+    </h1>
+    <span class="badge bg-danger fs-6">Admin Panel</span>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-4 mb-5">
+    <!-- Total Products -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <div class="mb-2">
+                    <i class="bi bi-box-seam display-5 text-primary"></i>
+                </div>
+                <p class="text-muted small text-uppercase fw-semibold mb-1">Total Products</p>
+                <h2 class="fw-bold mb-0">{{ stats.total_products }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Orders -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <div class="mb-2">
+                    <i class="bi bi-receipt display-5 text-success"></i>
+                </div>
+                <p class="text-muted small text-uppercase fw-semibold mb-1">Total Orders</p>
+                <h2 class="fw-bold mb-0">{{ stats.total_orders }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Users -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <div class="mb-2">
+                    <i class="bi bi-people display-5 text-warning"></i>
+                </div>
+                <p class="text-muted small text-uppercase fw-semibold mb-1">Total Users</p>
+                <h2 class="fw-bold mb-0">{{ stats.total_users }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Revenue -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <div class="mb-2">
+                    <i class="bi bi-currency-dollar display-5 text-danger"></i>
+                </div>
+                <p class="text-muted small text-uppercase fw-semibold mb-1">Total Revenue</p>
+                <h2 class="fw-bold mb-0">${{ "%.2f"|format(stats.total_revenue) }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation Links -->
+<div class="row g-3">
+    <div class="col-12 col-md-6">
+        <a href="/admin/products" class="card border-0 shadow-sm text-decoration-none h-100">
+            <div class="card-body d-flex align-items-center gap-3 py-3">
+                <i class="bi bi-box-seam fs-3 text-primary"></i>
+                <div>
+                    <h5 class="mb-0 fw-semibold text-dark">Manage Products</h5>
+                    <p class="text-muted small mb-0">Add, view, or delete products in the catalog</p>
+                </div>
+                <i class="bi bi-chevron-right ms-auto text-muted"></i>
+            </div>
+        </a>
+    </div>
+    <div class="col-12 col-md-6">
+        <a href="/admin/orders" class="card border-0 shadow-sm text-decoration-none h-100">
+            <div class="card-body d-flex align-items-center gap-3 py-3">
+                <i class="bi bi-receipt fs-3 text-success"></i>
+                <div>
+                    <h5 class="mb-0 fw-semibold text-dark">View Orders</h5>
+                    <p class="text-muted small mb-0">Browse and review all customer orders</p>
+                </div>
+                <i class="bi bi-chevron-right ms-auto text-muted"></i>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

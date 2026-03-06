@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Admin — Orders — ShopDemo{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2 mb-0">
+        <i class="bi bi-receipt me-2"></i>Orders
+    </h1>
+    <div class="d-flex gap-2">
+        <a href="/admin/dashboard" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Dashboard
+        </a>
+        <span class="badge bg-danger fs-6 d-flex align-items-center">Admin Panel</span>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-table me-2 text-secondary"></i>All Orders
+        </h5>
+        <span class="badge bg-secondary">{{ orders|length }} total</span>
+    </div>
+    <div class="card-body p-0">
+        {% if orders %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-3">Order ID</th>
+                        <th scope="col">Customer</th>
+                        <th scope="col">Items</th>
+                        <th scope="col">Total</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="pe-3">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td class="ps-3">
+                            <span class="fw-semibold">#{{ order.id }}</span>
+                        </td>
+                        <td>
+                            {% if order.user %}
+                                <div class="fw-semibold">{{ order.user.username }}</div>
+                                <div class="text-muted small">{{ order.user.email }}</div>
+                            {% else %}
+                                <span class="text-muted fst-italic">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.order_items %}
+                                <span class="badge bg-light text-dark border">
+                                    {{ order.order_items|length }} item{% if order.order_items|length != 1 %}s{% endif %}
+                                </span>
+                                <div class="small text-muted mt-1">
+                                    {% for item in order.order_items %}
+                                        {{ item.product.name if item.product else "Deleted product" }}
+                                        &times;{{ item.quantity }}{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-semibold">${{ "%.2f"|format(order.total_price) }}</td>
+                        <td>
+                            {% if order.status == "completed" %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif order.status == "pending" %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif order.status == "cancelled" %}
+                                <span class="badge bg-danger">Cancelled</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ order.status|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-3 text-muted small">
+                            {{ order.created_at.strftime("%Y-%m-%d %H:%M") if order.created_at else "—" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox display-4 d-block mb-3"></i>
+            <p class="mb-0">No orders have been placed yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
