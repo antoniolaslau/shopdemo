@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a href="/">Home</a>
+        </li>
+        <li class="breadcrumb-item">
+            <a href="/products">Products</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+    </ol>
+</nav>
+
+<!-- Product Detail — Two Column Layout -->
+<div class="row g-5">
+
+    <!-- Left Column: Product Image -->
+    <div class="col-md-5">
+        {% if product.image_url %}
+            <img
+                src="{{ product.image_url }}"
+                class="img-fluid rounded shadow"
+                alt="{{ product.name }}"
+                style="width: 100%; object-fit: cover; max-height: 480px;"
+            >
+        {% else %}
+            <div
+                class="rounded shadow bg-secondary d-flex align-items-center justify-content-center text-white"
+                style="height: 380px;"
+            >
+                <div class="text-center">
+                    <i class="bi bi-image display-1"></i>
+                    <p class="mt-2 mb-0">No Image Available</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Product Info & Add to Cart -->
+    <div class="col-md-7">
+        <h1 class="fw-bold">{{ product.name }}</h1>
+
+        <p class="display-6 text-primary fw-bold mt-2">
+            ${{ "%.2f"|format(product.price) }}
+        </p>
+
+        <!-- Stock Status -->
+        <div class="mb-3">
+            {% if product.stock == 0 %}
+                <span class="badge bg-danger fs-6">Out of Stock</span>
+            {% elif product.stock < 5 %}
+                <span class="badge bg-warning text-dark fs-6">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Only {{ product.stock }} left in stock
+                </span>
+            {% else %}
+                <span class="badge bg-success fs-6">
+                    <i class="bi bi-check-circle me-1"></i>In Stock ({{ product.stock }} available)
+                </span>
+            {% endif %}
+        </div>
+
+        <hr>
+
+        <!-- Description -->
+        <p class="text-muted fs-5">
+            {{ product.description or "No description available for this product." }}
+        </p>
+
+        <hr>
+
+        <!-- Add to Cart Form -->
+        {% if product.stock > 0 %}
+        <form method="POST" action="/cart/add" class="mt-4">
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+
+            <div class="row g-3 align-items-end">
+                <div class="col-auto">
+                    <label for="quantity" class="form-label fw-semibold">Quantity</label>
+                    <input
+                        type="number"
+                        class="form-control"
+                        id="quantity"
+                        name="quantity"
+                        value="1"
+                        min="1"
+                        max="{{ product.stock }}"
+                        style="width: 90px;"
+                    >
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                    </button>
+                </div>
+            </div>
+        </form>
+        {% else %}
+        <div class="alert alert-warning mt-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            This product is currently out of stock. Please check back later.
+        </div>
+        {% endif %}
+
+        <!-- Back Link -->
+        <div class="mt-4">
+            <a href="/products" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Products
+            </a>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
