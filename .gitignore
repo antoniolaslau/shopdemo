@@ -12,8 +12,16 @@ env/
 *.db
 *.sqlite3
 
-# Claude Code (private agent configs & memory)
-.claude/
+# Claude Code — expose only agent definitions and brainstorming skill
+.claude/settings.local.json
+.claude/agent-memory/
+.claude/skills/analyzing-financial-statements/
+.claude/skills/applying-brand-guidelines/
+.claude/skills/competitive-ads-extractor/
+.claude/skills/creating-financial-models/
+.claude/skills/deep-researcher/
+.claude/skills/file-organizer/
+.claude/skills/prompt-factory/
 
 # OS
 .DS_Store
