@@ -1,0 +1,8 @@
+{
+  "vuln_type": "IDOR (Insecure Direct Object Reference)",
+  "status": "fixed",
+  "fix_applied": "Replaced all occurrences of request.session.get('user') (dict pattern) with request.session.get('user_id') (integer) to align with the login handler's session key convention, fixing the session mismatch that was masking the IDOR. Added an ownership check on GET /orders/{order_id} and GET /orders/{order_id}/confirm: after fetching the order by ID, if order.user_id != user_id (the authenticated user), an HTTPException with status_code=403 and detail 'Access forbidden: you do not own this order.' is raised.",
+  "verification_curl": "curl -s -o /dev/null -w \"%{http_code}\" -H \"Cookie: session=eyJ1c2VyX2lkIjogMywgImlzX2FkbWluIjogZmFsc2UsICJmbGFzaF9tZXNzYWdlIjogIldlbGNvbWUgYmFjaywgYWxpY2UhIiwgImZsYXNoX3R5cGUiOiAic3VjY2VzcyJ9.aatpZA.7eOxbgm6fUVMBmvwwPNTXNT3f3Y\" http://localhost:8001/orders/1",
+  "verification_result": "403 Forbidden — access correctly denied: alice (user_id=3) attempting to access order 1 (owned by user, user_id=2) received HTTP 403, confirming the ownership check is enforced.",
+  "files_modified": ["routers/orders.py"]
+}

@@ -20,11 +20,11 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/checkout")
 async def checkout_page(request: Request, db: Session = Depends(get_db)):
     """Show checkout summary of current cart."""
-    user = request.session.get("user")
-    if not user:
+    user_id = request.session.get("user_id")
+    if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
-    items = db.query(CartItem).filter(CartItem.user_id == user["id"]).all()
+    items = db.query(CartItem).filter(CartItem.user_id == user_id).all()
     total = sum(item.product.price * item.quantity for item in items)
     return templates.TemplateResponse(
         "orders/checkout.html",
@@ -36,16 +36,16 @@ async def checkout_page(request: Request, db: Session = Depends(get_db)):
 async def checkout_submit(request: Request, db: Session = Depends(get_db)):
     """Convert cart to an order and clear the cart."""
     # VULN:CSRF — form token not validated here
-    user = request.session.get("user")
-    if not user:
+    user_id = request.session.get("user_id")
+    if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
-    items = db.query(CartItem).filter(CartItem.user_id == user["id"]).all()
+    items = db.query(CartItem).filter(CartItem.user_id == user_id).all()
     if not items:
         return RedirectResponse(url="/cart", status_code=303)
 
     total = sum(item.product.price * item.quantity for item in items)
-    order = Order(user_id=user["id"], status="pending", total=total)
+    order = Order(user_id=user_id, status="pending", total=total)
     db.add(order)
     db.flush()
 
@@ -65,13 +65,13 @@ async def checkout_submit(request: Request, db: Session = Depends(get_db)):
 @router.get("/orders")
 async def orders_list(request: Request, db: Session = Depends(get_db)):
     """List all orders belonging to the current authenticated user."""
-    user = request.session.get("user")
-    if not user:
+    user_id = request.session.get("user_id")
+    if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
     orders = (
         db.query(Order)
-        .filter(Order.user_id == user["id"])
+        .filter(Order.user_id == user_id)
         .order_by(Order.created_at.desc())
         .all()
     )
@@ -84,13 +84,15 @@ async def orders_list(request: Request, db: Session = Depends(get_db)):
 @router.get("/orders/{order_id}")
 async def order_detail(request: Request, order_id: int, db: Session = Depends(get_db)):
     """View a single order's details."""
-    user = request.session.get("user")
-    if not user:
+    user_id = request.session.get("user_id")
+    if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
-    order = db.query(Order).filter(Order.id == order_id).first()  # VULN:IDOR — no ownership check, any authenticated user can view any order
+    order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    if order.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Access forbidden: you do not own this order.")
 
     return templates.TemplateResponse(
         "orders/detail.html",
@@ -101,13 +103,15 @@ async def order_detail(request: Request, order_id: int, db: Session = Depends(ge
 @router.get("/orders/{order_id}/confirm")
 async def order_confirm(request: Request, order_id: int, db: Session = Depends(get_db)):
     """Show order confirmation page."""
-    user = request.session.get("user")
-    if not user:
+    user_id = request.session.get("user_id")
+    if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
-    order = db.query(Order).filter(Order.id == order_id).first()  # VULN:IDOR — no ownership check, any authenticated user can view any order
+    order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    if order.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Access forbidden: you do not own this order.")
 
     return templates.TemplateResponse(
         "orders/confirm.html",
