@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account — ShopDemo{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-sm-10 col-md-7 col-lg-5">
+
+        <h2 class="mb-4 text-center fw-semibold">
+            <i class="bi bi-person-plus-fill me-2"></i>Create Account
+        </h2>
+
+        <!-- Error message -->
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+        </div>
+        {% endif %}
+
+        <!-- Registration form -->
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <form method="post" action="/auth/register" novalidate id="registerForm">
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label fw-medium">Email address</label>
+                        <input
+                            type="email"
+                            class="form-control"
+                            id="email"
+                            name="email"
+                            placeholder="you@example.com"
+                            autocomplete="email"
+                            required
+                        >
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label fw-medium">Password</label>
+                        <input
+                            type="password"
+                            class="form-control"
+                            id="password"
+                            name="password"
+                            placeholder="At least 6 characters"
+                            autocomplete="new-password"
+                            minlength="6"
+                            required
+                        >
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="confirm_password" class="form-label fw-medium">
+                            Confirm Password
+                        </label>
+                        <input
+                            type="password"
+                            class="form-control"
+                            id="confirm_password"
+                            name="confirm_password"
+                            placeholder="Repeat your password"
+                            autocomplete="new-password"
+                            required
+                        >
+                        <!-- Client-side mismatch hint -->
+                        <div id="passwordMismatch" class="form-text text-danger d-none">
+                            <i class="bi bi-x-circle me-1"></i>Passwords do not match.
+                        </div>
+                        <div id="passwordMatch" class="form-text text-success d-none">
+                            <i class="bi bi-check-circle me-1"></i>Passwords match.
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="bi bi-person-check me-1"></i>Create Account
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <p class="text-center mt-3 text-muted">
+            Already have an account?
+            <a href="/auth/login" class="text-decoration-none fw-medium">Log in</a>
+        </p>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Client-side password match feedback
+    const passwordInput = document.getElementById('password');
+    const confirmInput  = document.getElementById('confirm_password');
+    const mismatchMsg   = document.getElementById('passwordMismatch');
+    const matchMsg      = document.getElementById('passwordMatch');
+    const submitBtn     = document.getElementById('submitBtn');
+
+    function checkPasswords() {
+        const pw  = passwordInput.value;
+        const cpw = confirmInput.value;
+
+        if (cpw.length === 0) {
+            mismatchMsg.classList.add('d-none');
+            matchMsg.classList.add('d-none');
+            submitBtn.disabled = false;
+            return;
+        }
+
+        if (pw !== cpw) {
+            mismatchMsg.classList.remove('d-none');
+            matchMsg.classList.add('d-none');
+            submitBtn.disabled = true;
+        } else {
+            mismatchMsg.classList.add('d-none');
+            matchMsg.classList.remove('d-none');
+            submitBtn.disabled = false;
+        }
+    }
+
+    confirmInput.addEventListener('input', checkPasswords);
+    passwordInput.addEventListener('input', checkPasswords);
+</script>
+{% endblock %}

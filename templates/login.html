@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Log In — ShopDemo{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-sm-10 col-md-7 col-lg-5">
+
+        <h2 class="mb-4 text-center fw-semibold">
+            <i class="bi bi-person-circle me-2"></i>Log In
+        </h2>
+
+        <!-- Demo credentials hint -->
+        <div class="alert alert-info" role="alert">
+            <h6 class="alert-heading mb-1">
+                <i class="bi bi-info-circle-fill me-1"></i>Demo Accounts
+            </h6>
+            <hr class="my-2">
+            <p class="mb-1">
+                <strong>Admin</strong> &mdash;
+                <code>admin@shopdemo.com</code> / <code>admin123</code>
+            </p>
+            <p class="mb-0">
+                <strong>User</strong> &nbsp;&mdash;
+                <code>user@shopdemo.com</code> / <code>user123</code>
+            </p>
+        </div>
+
+        <!-- Error message -->
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+        </div>
+        {% endif %}
+
+        <!-- Login form -->
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <form method="post" action="/auth/login" novalidate>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label fw-medium">Email address</label>
+                        <input
+                            type="email"
+                            class="form-control"
+                            id="email"
+                            name="email"
+                            placeholder="you@example.com"
+                            autocomplete="email"
+                            required
+                        >
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-medium">Password</label>
+                        <input
+                            type="password"
+                            class="form-control"
+                            id="password"
+                            name="password"
+                            placeholder="Your password"
+                            autocomplete="current-password"
+                            required
+                        >
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Log In
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <p class="text-center mt-3 text-muted">
+            Don't have an account?
+            <a href="/auth/register" class="text-decoration-none fw-medium">Create one</a>
+        </p>
+
+    </div>
+</div>
+{% endblock %}
