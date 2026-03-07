@@ -1,8 +1,64 @@
-# ShopDemo
+# ShopDemo: Build, Pentest, Fix
 
-A deliberately vulnerable e-commerce web application built with FastAPI, designed for security training and educational demonstrations. It ships with intentional vulnerabilities (SQL injection, CSRF, IDOR, Broken Access Control, XSS, weak secrets) so that learners can practice identifying and exploiting common web security issues in a safe, controlled environment.
+A full-cycle security demonstration project — a deliberately vulnerable e-commerce web application built with FastAPI, audited by an AI-powered red team, and fully remediated by an AI-powered fix team.
 
-**Do not deploy this application on a public network.**
+> **Do not deploy this application on a public network.**
+
+---
+
+## Pipeline Overview
+
+This project demonstrates a complete **Build → Pentest → Fix** pipeline, each phase driven by a team of specialized AI agents built with Claude Code.
+
+```
+Build Team        →   Pentest Team       →   Fix Team
+──────────────────    ─────────────────      ────────────────
+build-foundation      pentest-recon          fix-sqli
+build-auth            pentest-sqli           fix-xss
+build-store           pentest-xss            fix-idor
+build-cart-orders     pentest-idor           fix-csrf
+build-admin           pentest-csrf           fix-bac
+build-finalize        pentest-bac            fix-reporter
+                      pentest-reporter
+```
+
+- **Build team** — scaffolds the full FastAPI application with intentional vulnerabilities embedded for training purposes
+- **Pentest team** — conducts a black-box red team engagement via live HTTP (`curl`), producing structured JSON findings and a consolidated pentest report
+- **Fix team** — reads the pentest report, patches each vulnerability directly in the source code, verifies the fix via HTTP, and produces a fix report
+
+All agent definitions are in [`.claude/agents/`](.claude/agents/).
+
+---
+
+## Two-Branch Strategy
+
+| Branch | Purpose |
+|--------|---------|
+| `vulnerable` | Frozen snapshot of the application **before** any fixes — intentional vulnerabilities intact |
+| `main` | Fixed version — each vulnerability patched in a separate commit |
+
+To compare a vulnerability before and after the fix, switch branches on GitHub or use:
+
+```bash
+# Run the vulnerable version
+git checkout vulnerable
+uvicorn main:app --port 8001 --reload
+
+# Run the fixed version in a separate directory
+git worktree add ../shopdemo-main main
+cd ../shopdemo-main
+uvicorn main:app --port 8002 --reload
+```
+
+---
+
+## Reports
+
+| Report | Description |
+|--------|-------------|
+| [`reports/pentest_report.md`](reports/pentest_report.md) | Full red team findings — 3 High, 2 Medium severity vulnerabilities |
+| [`reports/fix_report.md`](reports/fix_report.md) | Remediation report — 5/5 vulnerabilities patched and verified |
+| [`reports/build_report.md`](reports/build_report.md) | Build team output — file map and known deviations |
 
 ---
 
@@ -10,24 +66,24 @@ A deliberately vulnerable e-commerce web application built with FastAPI, designe
 
 | Component | Technology |
 |-----------|-----------|
-| Web framework | FastAPI 0.x |
+| Web framework | FastAPI |
 | ASGI server | Uvicorn |
 | ORM | SQLAlchemy |
 | Database | SQLite (`shopdemo.db`) |
 | Templating | Jinja2 |
 | Session management | Starlette `SessionMiddleware` (cookie-based, signed) |
-| Authentication | Session cookies + passlib bcrypt (login flow), SHA-256 (auth.py helper — intentional weakness) |
+| Authentication | Session cookies + passlib bcrypt |
 | Forms | python-multipart |
-| Password hashing | passlib\[bcrypt\] (login router), hashlib SHA-256 (auth.py utility — intentional) |
+| Password hashing | passlib[bcrypt] |
 
 ---
 
 ## Project Structure
 
 ```
-shopdemo-v3/
+shopdemo/
 ├── main.py              # FastAPI app entry point, middleware, router mounts
-├── auth.py              # Root-level auth helpers (admin_required, login_required)
+├── auth.py              # Auth helpers (admin_required, login_required)
 ├── database.py          # SQLAlchemy engine, session factory, Base
 ├── models.py            # ORM models: User, Product, CartItem, Order, OrderItem
 ├── seed.py              # Database seeder (users + products)
@@ -38,6 +94,8 @@ shopdemo-v3/
 │   ├── cart.py          # /cart /cart/add /cart/remove
 │   ├── orders.py        # /checkout /orders /orders/{id}
 │   └── admin.py         # /admin/* — dashboard, products, orders
+├── utils/
+│   └── csrf.py          # CSRF token generation and validation
 ├── templates/           # Jinja2 HTML templates
 │   ├── base.html
 │   ├── login.html
@@ -46,19 +104,24 @@ shopdemo-v3/
 │   ├── cart/
 │   ├── orders/
 │   └── admin/
-├── static/              # CSS, JS, images
+├── static/              # CSS and assets
+├── docs/plans/          # Design documents for each pipeline phase
 └── reports/
-    └── build_report.md  # Automated build report
+    ├── build_report.md
+    ├── pentest_report.md
+    ├── fix_report.md
+    └── pentest/         # Raw JSON output from each pentest agent
 ```
 
 ---
 
 ## Setup Instructions
 
-### 1. Clone / obtain the project
+### 1. Clone the repository
 
 ```bash
-cd /path/to/shopdemo-v3
+git clone https://github.com/antoniolaslau/shopdemo.git
+cd shopdemo
 ```
 
 ### 2. Create and activate a virtual environment
@@ -79,7 +142,7 @@ venv\Scripts\Activate.ps1
 ### 3. Install dependencies
 
 ```bash
-# The --no-compile flag is required on WSL2 with NTFS-mounted drives (see Notes section)
+# Use --no-compile on WSL2 with NTFS-mounted drives (see Notes section)
 pip install --no-compile -r requirements.txt
 ```
 
@@ -89,15 +152,63 @@ pip install --no-compile -r requirements.txt
 python seed.py
 ```
 
-This creates `shopdemo.db` and populates it with 3 user accounts and 10 products.
+Creates `shopdemo.db` with 3 user accounts and 10 products.
 
-### 5. Start the development server
+### 5. Start the server
 
 ```bash
 uvicorn main:app --reload --port 8001
 ```
 
-Open your browser at `http://localhost:8001`.
+Open `http://localhost:8001` in your browser.
+
+---
+
+## Test Accounts
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@shopdemo.com` | `admin123` |
+| Regular user | `user@shopdemo.com` | `user123` |
+| Regular user | `alice@shopdemo.com` | `alice123` |
+
+---
+
+## Vulnerabilities
+
+### Fixed (on `main`)
+
+| # | Vulnerability | Severity | Location | Fix Applied |
+|---|--------------|----------|----------|-------------|
+| 1 | SQL Injection | High | `routers/store.py` — `search()` | Replaced raw f-string SQL with SQLAlchemy ORM `ilike()` filter |
+| 2 | Stored XSS | High | `templates/admin/products.html` | Removed `\| safe` filter — Jinja2 auto-escaping now active |
+| 3 | Broken Access Control | High | `routers/admin.py` — `products_delete()` | Added `require_admin` dependency with server-side `is_admin` check |
+| 4 | CSRF | Medium | `routers/cart.py`, `routers/orders.py` | Implemented synchronizer token pattern via `utils/csrf.py` |
+| 5 | IDOR | Medium | `routers/orders.py` — `order_detail()` | Added ownership check — returns 403 if order does not belong to current user |
+
+### Known Remaining Issues
+
+| # | Vulnerability | Severity | Location | Notes |
+|---|--------------|----------|----------|-------|
+| 1 | Hardcoded session secret | High | `main.py` — `SessionMiddleware` | `secret_key` is hardcoded — must be replaced with an environment variable in production |
+| 2 | CSRF coverage incomplete | Medium | `routers/auth.py`, `routers/admin.py` | 5 additional POST endpoints not yet covered by CSRF validation |
+| 3 | No rate limiting on login | Medium | `routers/auth.py` — `login_post()` | No throttling or account lockout on failed login attempts |
+| 4 | Weak password hashing utility | Medium | `auth.py` — `hash_password()` | Root-level utility uses SHA-256 without salt — bcrypt used in the login router but not everywhere |
+| 5 | Username enumeration via timing | Low | `routers/auth.py` — `login_post()` | Response time differs between unknown email and wrong password paths |
+
+---
+
+## Reproducing the Vulnerabilities
+
+> First checkout the `vulnerable` branch and start the server on port 8001. Full reproduction details are in [`reports/pentest_report.md`](reports/pentest_report.md).
+
+| # | Vulnerability | How to Reproduce |
+|---|--------------|-----------------|
+| 1 | **SQL Injection** | Go to `http://localhost:8001/search`, type `' OR 1=1--` in the search box and submit. All products are returned instead of a filtered result. |
+| 2 | **Stored XSS** | Login as admin, go to `http://localhost:8001/admin/products`, create a product with description `<script>alert('XSS')</script>`. Reload the page — a browser alert popup executes. |
+| 3 | **Broken Access Control** | Login as `user@shopdemo.com`, open browser console and run `fetch('/admin/products/delete/1', {method: 'POST'})`. Product is deleted despite the user not being an admin. |
+| 4 | **CSRF** | While logged in as any user, run `fetch('/cart/add', {method: 'POST', body: new URLSearchParams({product_id: '1', quantity: '1'})})` from any page — no CSRF token required, request succeeds. |
+| 5 | **IDOR** | Login as `alice@shopdemo.com`, navigate to `http://localhost:8001/orders/1` — Alice can view orders placed by other users by enumerating IDs. |
 
 ---
 
@@ -112,44 +223,42 @@ Open your browser at `http://localhost:8001`.
 | GET | `/auth/register` | Render registration page |
 | POST | `/auth/register` | Create new account and auto-login |
 | GET | `/auth/logout` | Destroy session and redirect to login |
-| POST | `/auth/clear-flash` | Remove flash message from session |
 
 ### Store
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/` | Homepage — featured products (redirects to `/products`) |
-| GET | `/products` | Paginated product catalog with optional category filter |
+| GET | `/` | Homepage — featured products |
+| GET | `/products` | Paginated product catalog |
 | GET | `/product/{id}` | Product detail page |
-| GET | `/search?q=...` | Product search (**intentionally vulnerable to SQL injection**) |
+| GET | `/search?q=...` | Product search |
 
 ### Cart
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/cart` | View current user's cart |
-| POST | `/cart/add` | Add product to cart (**no CSRF protection**) |
-| POST | `/cart/remove` | Remove item from cart (**no CSRF protection**) |
+| POST | `/cart/add` | Add product to cart |
+| POST | `/cart/remove` | Remove item from cart |
 
 ### Orders
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/checkout` | Show cart summary before placing order |
-| POST | `/checkout` | Convert cart to order (**no CSRF protection**) |
+| POST | `/checkout` | Convert cart to order |
 | GET | `/orders` | List authenticated user's orders |
-| GET | `/orders/{order_id}` | Order detail (**IDOR — no ownership check**) |
-| GET | `/orders/{order_id}/confirm` | Order confirmation (**IDOR — no ownership check**) |
+| GET | `/orders/{order_id}` | Order detail |
+| GET | `/orders/{order_id}/confirm` | Order confirmation |
 
 ### Admin (`/admin`)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/admin` | Redirect to dashboard |
 | GET | `/admin/dashboard` | Admin statistics dashboard |
 | GET | `/admin/products` | List all products + create form |
-| POST | `/admin/products` | Create new product (**stored XSS in description**) |
-| POST | `/admin/products/delete/{id}` | Delete product (**no auth check — Broken Access Control**) |
+| POST | `/admin/products` | Create new product |
+| POST | `/admin/products/delete/{id}` | Delete product |
 | GET | `/admin/orders` | List all orders |
 
 ### Interactive API Docs
@@ -161,39 +270,6 @@ Open your browser at `http://localhost:8001`.
 
 ---
 
-## Test Accounts
-
-These accounts are created by `seed.py`:
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | `admin@shopdemo.com` | `admin123` |
-| Regular user | `user@shopdemo.com` | `user123` |
-| Regular user | `alice@shopdemo.com` | `alice123` |
-
----
-
-## Known Intentional Vulnerabilities
-
-This application is an intentional vulnerable target. The following vulnerabilities are present for educational purposes:
-
-| # | Vulnerability | Type | Location | Severity | Description |
-|---|--------------|------|----------|----------|-------------|
-| 1 | SQL Injection in search | SQLi | `routers/store.py:101` — `search()` | Critical | Raw user input from `?q=` is interpolated directly into a `text()` SQL query without parameterisation. Attacker can dump tables, bypass filters, or cause errors. |
-| 2 | Hardcoded session secret | Weak Secret | `main.py:23` — `SessionMiddleware` | High | The `secret_key` is hardcoded as `"shopdemo-secret-key-change-in-production"`. An attacker who knows this key can forge arbitrary session cookies. |
-| 3 | CSRF on cart add | CSRF | `routers/cart.py:40` — `cart_add()` | High | `POST /cart/add` accepts form submissions without any CSRF token check. A malicious page can silently add items to a logged-in user's cart. |
-| 4 | CSRF on cart remove | CSRF | `routers/cart.py:70` — `cart_remove()` | High | `POST /cart/remove` has no CSRF token validation. Any cross-site request can remove items from a victim's cart. |
-| 5 | CSRF on checkout | CSRF | `routers/orders.py:35` — `checkout_submit()` | High | `POST /checkout` has no CSRF token validation. A malicious page can force a logged-in user to place an order. |
-| 6 | IDOR on order detail | IDOR | `routers/orders.py:91` — `order_detail()` | High | `GET /orders/{order_id}` fetches any order by ID with no ownership check. Any authenticated user can view another user's order details by enumerating IDs. |
-| 7 | IDOR on order confirmation | IDOR | `routers/orders.py:108` — `order_confirm()` | High | `GET /orders/{order_id}/confirm` has the same missing ownership check as `order_detail`. |
-| 8 | Broken Access Control on product delete | BAC | `routers/admin.py:121` — `products_delete()` | Critical | `POST /admin/products/delete/{id}` has no authentication or admin check. Any unauthenticated request can permanently delete any product. |
-| 9 | Stored XSS in product description | XSS | `routers/admin.py:106` — `products_create()` | High | Product `description` is stored as-is with no HTML sanitisation. If rendered unescaped in templates, malicious script tags execute in every visitor's browser. |
-| 10 | Weak password hashing utility | Insecure Crypto | `auth.py:14` — `hash_password()` | Medium | The root-level `auth.py` utility uses raw SHA-256 (no salt, no iterations) to hash passwords. SHA-256 is trivially brute-forced with GPU hardware; bcrypt/argon2 should be used instead. |
-| 11 | No rate limiting on login | Missing Control | `routers/auth.py:87` — `login_post()` | Medium | The `POST /auth/login` endpoint has no rate limiting or account lockout. Attackers can attempt unlimited password combinations without throttling. |
-| 12 | Username enumeration via timing | Information Disclosure | `routers/auth.py:95-105` — `login_post()` | Low | The login response time differs between "user not found" (fast path) and "wrong password" (bcrypt verify) paths, leaking whether an email address is registered. |
-
----
-
 ## Notes for WSL2 Users
 
 When running on WSL2 with the project on a Windows NTFS-mounted filesystem (e.g., `/mnt/c/...`), always install packages with the `--no-compile` flag:
@@ -202,4 +278,4 @@ When running on WSL2 with the project on a Windows NTFS-mounted filesystem (e.g.
 pip install --no-compile -r requirements.txt
 ```
 
-Without `--no-compile`, pip may fail or hang while trying to write `.pyc` bytecode files to NTFS mount points, which do not support the same file locking semantics as native Linux filesystems.
+Without `--no-compile`, pip may fail or hang while writing `.pyc` bytecode files to NTFS mount points, which do not support the same file locking semantics as native Linux filesystems.
