@@ -270,6 +270,26 @@ Open `http://localhost:8001` in your browser.
 
 ---
 
+## Agent Architecture
+
+Each agent in this project was designed with a single responsibility — one job, one input, one output. Just like hiring specialists instead of generalists: you don't ask your security auditor to also write the code, and you don't ask your developer to also run the penetration tests.
+
+Every agent knows exactly what it receives (a report or a JSON file), what it must do, and what it must produce before handing off to the next. This makes the pipeline reliable, traceable, and easy to extend — add a new agent without touching the others.
+
+The full design decisions behind each team are documented in [`docs/plans/`](docs/plans/).
+
+---
+
+## Future Enhancements
+
+- **Offensive tools for pentest agents** — integrate `sqlmap`, `nikto`, and `ffuf` into the pentest pipeline for deeper, automated vulnerability discovery (agents currently use `curl` only)
+- **CSRF coverage** — extend token validation to all remaining unprotected POST endpoints
+- **Fix pipeline orchestrator** — a single agent that runs all fix agents sequentially and produces the final report automatically
+- **Environment variables** — replace hardcoded session secret with `.env` file support
+- **README badges** — add Python version, FastAPI, SQLite, and license badges
+
+---
+
 ## Notes for WSL2 Users
 
 When running on WSL2 with the project on a Windows NTFS-mounted filesystem (e.g., `/mnt/c/...`), always install packages with the `--no-compile` flag:
