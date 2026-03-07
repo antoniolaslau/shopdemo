@@ -47,6 +47,7 @@
             <div class="card-body">
                 <p class="text-muted small">By placing your order you agree to the demo terms.</p>
                 <form method="POST" action="/checkout">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary btn-lg">
                             <i class="bi bi-check-circle"></i> Place Order

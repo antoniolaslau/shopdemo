@@ -78,6 +78,7 @@
         {% if product.stock > 0 %}
         <form method="POST" action="/cart/add" class="mt-4">
             <input type="hidden" name="product_id" value="{{ product.id }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
             <div class="row g-3 align-items-end">
                 <div class="col-auto">

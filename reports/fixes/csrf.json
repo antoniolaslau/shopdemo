@@ -1,0 +1,16 @@
+{
+  "vuln_type": "CSRF (Cross-Site Request Forgery)",
+  "status": "fixed",
+  "fix_applied": "Implemented the synchronizer token pattern across all state-changing POST endpoints in routers/cart.py and routers/orders.py. Created utils/csrf.py with: generate_csrf_token(session) which generates a 64-character cryptographically secure hex token via secrets.token_hex(32) and stores it in the Starlette session under the key 'csrf_token' (per-session, not per-request, to preserve multi-tab usage); validate_csrf_token(session, submitted_token) which retrieves the stored token and compares it using secrets.compare_digest to prevent timing attacks, raising HTTPException(403) on mismatch or missing token; and verify_csrf_token FastAPI dependency that extracts the 'csrf_token' form field and delegates to validate_csrf_token. The dependency was applied via dependencies=[Depends(verify_csrf_token)] to POST /cart/add, POST /cart/remove (routers/cart.py) and POST /checkout (routers/orders.py). The CSRF token is now injected into template contexts by the corresponding GET handlers: GET /cart (routers/cart.py), GET /checkout (routers/orders.py), and GET /product/{id} (routers/store.py). Hidden input fields <input type='hidden' name='csrf_token' value='{{ csrf_token }}'> were added inside every POST form in: templates/cart/index.html (cart/remove form), templates/orders/checkout.html (checkout form), and templates/store/detail.html (cart/add form). SessionMiddleware was already present in main.py — no changes required there.",
+  "verification_curl": "curl -s -o /dev/null -w \"%{http_code}\" -X POST http://localhost:8001/cart/add -d \"product_id=1&quantity=1\"",
+  "verification_result": "HTTP 403 returned — CSRF token validation is enforced. Request without token was rejected. Additional verification confirmed POST /cart/remove and POST /checkout also return HTTP 403 without a valid CSRF token.",
+  "files_modified": [
+    "utils/csrf.py",
+    "routers/cart.py",
+    "routers/orders.py",
+    "routers/store.py",
+    "templates/cart/index.html",
+    "templates/orders/checkout.html",
+    "templates/store/detail.html"
+  ]
+}

@@ -2,7 +2,6 @@
 Order routes for ShopDemo.
 Intentional vulnerabilities for demo/educational purposes:
 - VULN:IDOR — GET /orders/{id} and GET /orders/{id}/confirm fetch order by ID only, no ownership check
-- VULN:CSRF — POST /checkout does not validate CSRF token
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -12,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import CartItem, Order, OrderItem
+from utils.csrf import generate_csrf_token, verify_csrf_token
 
 router = APIRouter(prefix="", tags=["orders"])
 templates = Jinja2Templates(directory="templates")
@@ -26,16 +26,16 @@ async def checkout_page(request: Request, db: Session = Depends(get_db)):
 
     items = db.query(CartItem).filter(CartItem.user_id == user_id).all()
     total = sum(item.product.price * item.quantity for item in items)
+    csrf_token = generate_csrf_token(request.session)
     return templates.TemplateResponse(
         "orders/checkout.html",
-        {"request": request, "items": items, "total": total},
+        {"request": request, "items": items, "total": total, "csrf_token": csrf_token},
     )
 
 
-@router.post("/checkout")  # VULN:CSRF — no CSRF token validation
+@router.post("/checkout", dependencies=[Depends(verify_csrf_token)])
 async def checkout_submit(request: Request, db: Session = Depends(get_db)):
     """Convert cart to an order and clear the cart."""
-    # VULN:CSRF — form token not validated here
     user_id = request.session.get("user_id")
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)

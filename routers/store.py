@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 from database import get_db
 from models import Product
+from utils.csrf import generate_csrf_token
 
 router = APIRouter(prefix="", tags=["store"])
 
@@ -76,12 +77,14 @@ async def product_detail(id: int, request: Request, db: Session = Depends(get_db
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
+    csrf_token = generate_csrf_token(request.session)
     return templates.TemplateResponse(
         "store/detail.html",
         {
             "request": request,
             "product": product,
             "page_title": product.name,
+            "csrf_token": csrf_token,
         },
     )
 

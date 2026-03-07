@@ -1,7 +1,5 @@
 """
 Cart routes for ShopDemo.
-Intentional vulnerabilities for demo/educational purposes:
-- VULN:CSRF — POST endpoints do not validate CSRF tokens
 """
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -11,8 +9,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import CartItem, Product
-
-# Security Note: CSRF protection intentionally omitted for demo purposes
+from utils.csrf import generate_csrf_token, verify_csrf_token
 
 router = APIRouter(prefix="", tags=["cart"])
 templates = Jinja2Templates(directory="templates")
@@ -31,13 +28,14 @@ async def cart_page(request: Request, db: Session = Depends(get_db)):
         .all()
     )
     total = sum(item.product.price * item.quantity for item in items)
+    csrf_token = generate_csrf_token(request.session)
     return templates.TemplateResponse(
         "cart/index.html",
-        {"request": request, "items": items, "total": total},
+        {"request": request, "items": items, "total": total, "csrf_token": csrf_token},
     )
 
 
-@router.post("/cart/add")  # VULN:CSRF — no CSRF token validation
+@router.post("/cart/add", dependencies=[Depends(verify_csrf_token)])
 async def cart_add(
     request: Request,
     product_id: int = Form(...),
@@ -45,7 +43,6 @@ async def cart_add(
     db: Session = Depends(get_db),
 ):
     """Add a product to the cart. Upserts if item already exists."""
-    # VULN:CSRF — form token not validated here
     user = request.session.get("user")
     if not user:
         return RedirectResponse(url="/login", status_code=303)
@@ -67,14 +64,13 @@ async def cart_add(
     return RedirectResponse(url="/cart", status_code=303)
 
 
-@router.post("/cart/remove")  # VULN:CSRF — no CSRF token validation
+@router.post("/cart/remove", dependencies=[Depends(verify_csrf_token)])
 async def cart_remove(
     request: Request,
     cart_item_id: int = Form(...),
     db: Session = Depends(get_db),
 ):
     """Remove an item from the cart."""
-    # VULN:CSRF — form token not validated here
     user = request.session.get("user")
     if not user:
         return RedirectResponse(url="/login", status_code=303)
