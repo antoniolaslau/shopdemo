@@ -9,7 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 # Local
-from auth import admin_required
+from auth import admin_required, require_admin
 from database import get_db
 from models import Order, Product, User
 
@@ -118,16 +118,16 @@ async def products_create(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/products/delete/{product_id}")  # VULN:BAC
+@router.post("/products/delete/{product_id}")
 async def products_delete(
     product_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
     """Delete a product by ID.
 
-    WARNING: This endpoint intentionally omits the is_admin check.
-    It is a Broken Access Control (BAC) vulnerability included for
-    educational/demonstration purposes.
+    Requires the requesting user to have is_admin=True in the database.
+    Returns HTTP 403 Forbidden if the user is unauthenticated or not an admin.
     """
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:

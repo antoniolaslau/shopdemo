@@ -53,3 +53,24 @@ def admin_required(
         response = RedirectResponse(url="/", status_code=302)
         raise Exception(response)
     return user
+
+
+def require_admin(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> User:
+    """FastAPI dependency that enforces admin-level authorization.
+
+    Returns HTTP 403 Forbidden (not a redirect) if the requesting user is
+    not authenticated or does not have is_admin=True in the database.
+    This is the correct authorization check for state-changing admin routes.
+    """
+    from fastapi import HTTPException
+
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=403, detail="Forbidden: Admin access required")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden: Admin access required")
+    return user
