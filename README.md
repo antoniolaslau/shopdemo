@@ -75,6 +75,7 @@ uvicorn main:app --port 8002 --reload
 | Authentication | Session cookies + passlib bcrypt |
 | Forms | python-multipart |
 | Password hashing | passlib[bcrypt] |
+| Linter / formatter | Ruff (configured in `pyproject.toml`) |
 
 ---
 
@@ -85,15 +86,20 @@ shopdemo/
 ├── main.py              # FastAPI app entry point, middleware, router mounts
 ├── auth.py              # Auth helpers (admin_required, login_required)
 ├── database.py          # SQLAlchemy engine, session factory, Base
-├── models.py            # ORM models: User, Product, CartItem, Order, OrderItem
-├── seed.py              # Database seeder (users + products)
+├── models.py            # ORM models: User, Product, Category, CartItem, Order, OrderItem
+├── seed.py              # Database seeder (categories, users, products)
 ├── requirements.txt     # Python dependencies
+├── pyproject.toml       # Ruff linter/formatter configuration
+├── run.sh               # One-command startup script (drop DB → seed → serve)
 ├── routers/
 │   ├── auth.py          # /auth/* — login, register, logout
 │   ├── store.py         # / /products /product/{id} /search
 │   ├── cart.py          # /cart /cart/add /cart/remove
 │   ├── orders.py        # /checkout /orders /orders/{id}
-│   └── admin.py         # /admin/* — dashboard, products, orders
+│   ├── admin.py         # /admin/* — dashboard, products, orders, categories
+│   └── categories.py    # /categories /categories/{slug}
+├── services/
+│   └── category_service.py  # Category business logic (service layer)
 ├── utils/
 │   └── csrf.py          # CSRF token generation and validation
 ├── templates/           # Jinja2 HTML templates
@@ -103,7 +109,8 @@ shopdemo/
 │   ├── store/
 │   ├── cart/
 │   ├── orders/
-│   └── admin/
+│   ├── admin/
+│   └── categories/
 ├── static/              # CSS and assets
 ├── docs/plans/          # Design documents for each pipeline phase
 └── reports/
@@ -146,21 +153,20 @@ venv\Scripts\Activate.ps1
 pip install --no-compile -r requirements.txt
 ```
 
-### 4. Seed the database
+### 4. Start the application
+
+```bash
+bash run.sh
+```
+
+`run.sh` drops any existing `shopdemo.db`, reseeds it (7 categories, 3 users, 10 products), and starts Uvicorn on port 8001. Open `http://localhost:8001` in your browser.
+
+**Or manually:**
 
 ```bash
 python seed.py
-```
-
-Creates `shopdemo.db` with 3 user accounts and 10 products.
-
-### 5. Start the server
-
-```bash
 uvicorn main:app --reload --port 8001
 ```
-
-Open `http://localhost:8001` in your browser.
 
 ---
 
@@ -229,9 +235,16 @@ Open `http://localhost:8001` in your browser.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/` | Homepage — featured products |
-| GET | `/products` | Paginated product catalog |
+| GET | `/products` | Paginated product catalog with category filter sidebar |
 | GET | `/product/{id}` | Product detail page |
 | GET | `/search?q=...` | Product search |
+
+### Categories
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/categories` | Category listing page |
+| GET | `/categories/{slug}` | All active products in a category |
 
 ### Cart
 
@@ -260,6 +273,9 @@ Open `http://localhost:8001` in your browser.
 | POST | `/admin/products` | Create new product |
 | POST | `/admin/products/delete/{id}` | Delete product |
 | GET | `/admin/orders` | List all orders |
+| GET | `/admin/categories` | List all categories + create form |
+| POST | `/admin/categories` | Create new category |
+| POST | `/admin/categories/delete/{id}` | Delete category |
 
 ### Interactive API Docs
 
@@ -280,12 +296,47 @@ The full design decisions behind each team are documented in [`docs/plans/`](doc
 
 ---
 
+## Software Engineering Practices
+
+Beyond the security pipeline, this project demonstrates several software engineering techniques applied to a real codebase.
+
+### Service Layer Pattern
+
+The categories feature was built with a deliberate architectural separation that the original routers do not have:
+
+```
+Request → Router (HTTP only) → Service (business logic) → Database
+```
+
+- **`routers/categories.py`** — thin HTTP layer. Each route handler is a single call into the service and a template response. No database queries, no business logic.
+- **`services/category_service.py`** — owns all category logic: fetching, creating, deleting, slug uniqueness checks. No HTTP concepts here — just functions that take a `db` session and return data.
+
+This makes the business logic independently testable and reusable. Compare `routers/categories.py` to `routers/admin.py` — the contrast between the two styles is intentional and visible in the same codebase.
+
+### Code Quality Tooling
+
+`pyproject.toml` configures **Ruff** as the project's linter and formatter:
+
+```bash
+# Check for issues
+ruff check .
+
+# Auto-fix and format
+ruff format .
+```
+
+The active ruleset covers style (E/W), unused imports (F), import ordering (I), modern Python syntax (UP), common bugs (B), and comprehension improvements (C4). Line-length formatting is delegated to `ruff format`.
+
+---
+
 ## Future Enhancements
 
 - **Offensive tools for pentest agents** — integrate `sqlmap`, `nikto`, and `ffuf` into the pentest pipeline for deeper, automated vulnerability discovery (agents currently use `curl` only)
-- **CSRF coverage** — extend token validation to all remaining unprotected POST endpoints
+- **CSRF coverage** — extend token validation to all remaining unprotected POST endpoints (`/auth`, `/admin`)
 - **Fix pipeline orchestrator** — a single agent that runs all fix agents sequentially and produces the final report automatically
 - **Environment variables** — replace hardcoded session secret with `.env` file support
+- **Service layer expansion** — apply the service layer pattern to the existing auth, store, cart, and order routers
+- **Unit tests** — add a `tests/` layer with pytest; the service layer in `services/` is already structured for easy unit testing without HTTP
 - **README badges** — add Python version, FastAPI, SQLite, and license badges
 
 ---
