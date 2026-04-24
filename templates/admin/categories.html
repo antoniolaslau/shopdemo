@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Admin — Categories — ShopDemo{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2 mb-0">
+        <i class="bi bi-tags me-2"></i>Categories
+    </h1>
+    <div class="d-flex gap-2">
+        <a href="/admin/dashboard" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Dashboard
+        </a>
+        <span class="badge bg-danger fs-6 d-flex align-items-center">Admin Panel</span>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+</div>
+{% endif %}
+
+<!-- Create Category Form -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-plus-circle me-2 text-primary"></i>Add New Category
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="post" action="/admin/categories">
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label for="name" class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+                    <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Laptops" required>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="slug" class="form-label fw-semibold">Slug <span class="text-danger">*</span></label>
+                    <input type="text" id="slug" name="slug" class="form-control" placeholder="e.g. laptops" required>
+                    <div class="form-text">Lowercase, hyphens only. Used in URLs.</div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="description" class="form-label fw-semibold">Description</label>
+                    <input type="text" id="description" name="description" class="form-control" placeholder="Short description">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>Create Category
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Categories Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-table me-2 text-secondary"></i>All Categories
+        </h5>
+        <span class="badge bg-secondary">{{ categories|length }} total</span>
+    </div>
+    <div class="card-body p-0">
+        {% if categories %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-3">ID</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Slug</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Products</th>
+                        <th scope="col" class="pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td class="ps-3 text-muted">{{ category.id }}</td>
+                        <td class="fw-semibold">{{ category.name }}</td>
+                        <td><code>{{ category.slug }}</code></td>
+                        <td class="text-muted">{{ category.description or "—" }}</td>
+                        <td>
+                            <span class="badge bg-secondary">
+                                {{ category.products | selectattr("is_active") | list | length }}
+                            </span>
+                        </td>
+                        <td class="pe-3">
+                            <form
+                                method="post"
+                                action="/admin/categories/delete/{{ category.id }}"
+                                onsubmit="return confirm('Delete \'{{ category.name }}\'? Products will become uncategorised.');"
+                            >
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="bi bi-trash me-1"></i>Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-tags display-4 d-block mb-3"></i>
+            <p class="mb-0">No categories yet. Add one above.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

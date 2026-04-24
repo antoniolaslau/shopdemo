@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 from database import get_db
 from models import Product
+from services import category_service
 from utils.csrf import generate_csrf_token
 
 router = APIRouter(prefix="", tags=["store"])
@@ -40,18 +41,13 @@ async def catalog(
     request: Request,
     page: int = 1,
     per_page: int = 12,
-    category: str = None,
     db: Session = Depends(get_db),
 ):
-    """Paginated product catalog with optional category filter."""
-    query = db.query(Product).filter(Product.is_active == True)
-
-    # Category filter — stored as a prefix convention in product name for demo purposes
-    if category:
-        query = query.filter(Product.name.ilike(f"{category}%"))
-
+    """Paginated product catalog with category filter sidebar."""
+    query = db.query(Product).filter(Product.is_active == True)  # noqa: E712
     offset = (page - 1) * per_page
     products = query.offset(offset).limit(per_page).all()
+    all_categories = category_service.get_all_categories(db)
 
     return templates.TemplateResponse(
         "store/catalog.html",
@@ -60,7 +56,8 @@ async def catalog(
             "products": products,
             "page": page,
             "per_page": per_page,
-            "category": category,
+            "all_categories": all_categories,
+            "active_category": None,
             "page_title": "All Products",
         },
     )

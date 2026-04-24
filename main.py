@@ -34,17 +34,19 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Router mounts (uncomment as each router module is implemented)
 # ---------------------------------------------------------------------------
 
-from routers.auth import router as auth_router
-from routers.store import router as store_router
-from routers.cart import router as cart_router
-from routers.orders import router as orders_router
 from routers.admin import router as admin_router
+from routers.auth import router as auth_router
+from routers.cart import router as cart_router
+from routers.categories import router as categories_router
+from routers.orders import router as orders_router
+from routers.store import router as store_router
 
 app.include_router(auth_router)
 app.include_router(store_router)
 app.include_router(cart_router)
 app.include_router(orders_router)
 app.include_router(admin_router)
+app.include_router(categories_router)
 
 # ---------------------------------------------------------------------------
 # Startup event

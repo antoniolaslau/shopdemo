@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from auth import admin_required, require_admin
 from database import get_db
 from models import Order, Product, User
+from services import category_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -135,6 +136,61 @@ async def products_delete(
     db.delete(product)
     db.commit()
     return RedirectResponse(url="/admin/products", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Categories list + create — GET /admin/categories, POST /admin/categories
+# ---------------------------------------------------------------------------
+
+
+@router.get("/categories", response_class=HTMLResponse)
+async def categories_list(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(admin_required),
+):
+    categories = category_service.get_all_categories(db)
+    return templates.TemplateResponse(
+        "admin/categories.html",
+        {"request": request, "categories": categories, "current_user": current_user},
+    )
+
+
+@router.post("/categories")
+async def categories_create(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(admin_required),
+    name: str = Form(...),
+    slug: str = Form(...),
+    description: str = Form(""),
+):
+    if category_service.slug_is_taken(db, slug):
+        categories = category_service.get_all_categories(db)
+        return templates.TemplateResponse(
+            "admin/categories.html",
+            {
+                "request": request,
+                "categories": categories,
+                "current_user": current_user,
+                "error": f"Slug '{slug}' is already in use. Choose a different one.",
+            },
+            status_code=400,
+        )
+    category_service.create_category(db, name=name, slug=slug, description=description)
+    return RedirectResponse(url="/admin/categories", status_code=303)
+
+
+@router.post("/categories/delete/{category_id}")
+async def categories_delete(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    deleted = category_service.delete_category(db, category_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return RedirectResponse(url="/admin/categories", status_code=303)
 
 
 # ---------------------------------------------------------------------------
