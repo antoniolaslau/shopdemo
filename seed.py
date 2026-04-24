@@ -23,14 +23,53 @@ warnings.filterwarnings("ignore", ".*error reading bcrypt version.*")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from passlib.context import CryptContext
+
 from database import SessionLocal, engine
-from models import Base, Product, User
+from models import Base, Category, Product, User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ---------------------------------------------------------------------------
 # Seed data
 # ---------------------------------------------------------------------------
+
+CATEGORIES = [
+    {
+        "name": "Laptops & Tablets",
+        "slug": "laptops-tablets",
+        "description": "Portable computers and tablets for work and creativity.",
+    },
+    {
+        "name": "Audio",
+        "slug": "audio",
+        "description": "Headphones, earbuds, and speakers.",
+    },
+    {
+        "name": "Monitors & Displays",
+        "slug": "monitors-displays",
+        "description": "Screens for your desktop setup.",
+    },
+    {
+        "name": "Accessories",
+        "slug": "accessories",
+        "description": "Keyboards, mice, hubs, and other peripherals.",
+    },
+    {
+        "name": "Storage",
+        "slug": "storage",
+        "description": "SSDs, hard drives, and memory cards.",
+    },
+    {
+        "name": "Single-Board Computers",
+        "slug": "single-board-computers",
+        "description": "Raspberry Pi and similar embedded computing boards.",
+    },
+    {
+        "name": "Streaming & Content Creation",
+        "slug": "streaming-content-creation",
+        "description": "Tools for streamers, podcasters, and creators.",
+    },
+]
 
 USERS = [
     {
@@ -63,6 +102,7 @@ PRODUCTS = [
         "price": 1999.99,
         "stock": 15,
         "image_url": "https://placehold.co/400x300?text=MacBook+Pro+14",
+        "category_slug": "laptops-tablets",
     },
     {
         "name": "Sony WH-1000XM5 Headphones",
@@ -73,6 +113,7 @@ PRODUCTS = [
         "price": 349.99,
         "stock": 42,
         "image_url": "https://placehold.co/400x300?text=Sony+WH-1000XM5",
+        "category_slug": "audio",
     },
     {
         "name": 'Samsung 4K Monitor 27"',
@@ -83,6 +124,7 @@ PRODUCTS = [
         "price": 449.99,
         "stock": 28,
         "image_url": "https://placehold.co/400x300?text=Samsung+4K+Monitor",
+        "category_slug": "monitors-displays",
     },
     {
         "name": "Logitech MX Master 3S Mouse",
@@ -93,6 +135,7 @@ PRODUCTS = [
         "price": 99.99,
         "stock": 60,
         "image_url": "https://placehold.co/400x300?text=MX+Master+3S",
+        "category_slug": "accessories",
     },
     {
         "name": "Keychron K2 Mechanical Keyboard",
@@ -103,6 +146,7 @@ PRODUCTS = [
         "price": 89.99,
         "stock": 35,
         "image_url": "https://placehold.co/400x300?text=Keychron+K2",
+        "category_slug": "accessories",
     },
     {
         "name": "Anker USB-C Hub 7-in-1",
@@ -113,6 +157,7 @@ PRODUCTS = [
         "price": 49.99,
         "stock": 80,
         "image_url": "https://placehold.co/400x300?text=Anker+USB-C+Hub",
+        "category_slug": "accessories",
     },
     {
         "name": 'iPad Pro 12.9" M2',
@@ -123,6 +168,7 @@ PRODUCTS = [
         "price": 1099.99,
         "stock": 20,
         "image_url": "https://placehold.co/400x300?text=iPad+Pro+12.9",
+        "category_slug": "laptops-tablets",
     },
     {
         "name": "WD Black 2TB SSD",
@@ -133,6 +179,7 @@ PRODUCTS = [
         "price": 179.99,
         "stock": 50,
         "image_url": "https://placehold.co/400x300?text=WD+Black+2TB+SSD",
+        "category_slug": "storage",
     },
     {
         "name": "Elgato Stream Deck MK.2",
@@ -143,6 +190,7 @@ PRODUCTS = [
         "price": 149.99,
         "stock": 25,
         "image_url": "https://placehold.co/400x300?text=Stream+Deck+MK.2",
+        "category_slug": "streaming-content-creation",
     },
     {
         "name": "Raspberry Pi 5 (8 GB)",
@@ -153,6 +201,7 @@ PRODUCTS = [
         "price": 80.00,
         "stock": 100,
         "image_url": "https://placehold.co/400x300?text=Raspberry+Pi+5",
+        "category_slug": "single-board-computers",
     },
 ]
 
@@ -160,6 +209,26 @@ PRODUCTS = [
 # ---------------------------------------------------------------------------
 # Seeding logic
 # ---------------------------------------------------------------------------
+
+def seed_categories(db) -> tuple[int, int]:
+    """Insert seed categories; returns (inserted, skipped) counts."""
+    inserted = 0
+    skipped = 0
+    for c in CATEGORIES:
+        existing = db.query(Category).filter(Category.slug == c["slug"]).first()
+        if existing:
+            skipped += 1
+            continue
+        category = Category(
+            name=c["name"],
+            slug=c["slug"],
+            description=c["description"],
+        )
+        db.add(category)
+        inserted += 1
+    db.commit()
+    return inserted, skipped
+
 
 def seed_users(db) -> tuple[int, int]:
     """Insert seed users; returns (inserted, skipped) counts."""
@@ -186,6 +255,7 @@ def seed_products(db) -> tuple[int, int]:
     """Insert seed products; returns (inserted, skipped) counts."""
     inserted = 0
     skipped = 0
+    category_map = {c.slug: c for c in db.query(Category).all()}
     for p in PRODUCTS:
         existing = db.query(Product).filter(Product.name == p["name"]).first()
         if existing:
@@ -198,6 +268,7 @@ def seed_products(db) -> tuple[int, int]:
             stock=p["stock"],
             image_url=p["image_url"],
             is_active=True,
+            category_id=category_map[p["category_slug"]].id,
         )
         db.add(product)
         inserted += 1
@@ -216,6 +287,14 @@ def main():
 
     db = SessionLocal()
     try:
+        # Seed categories (must come before products)
+        c_ins, c_skip = seed_categories(db)
+        print(f"\nCategories:")
+        print(f"  Inserted : {c_ins}")
+        print(f"  Skipped  : {c_skip} (already exist)")
+        for c in CATEGORIES:
+            print(f"    [{c['slug']}]  {c['name']}")
+
         # Seed users
         u_ins, u_skip = seed_users(db)
         print(f"\nUsers:")
@@ -231,7 +310,7 @@ def main():
         print(f"  Inserted : {p_ins}")
         print(f"  Skipped  : {p_skip} (already exist)")
         for p in PRODUCTS:
-            print(f"    ${p['price']:>8.2f}  {p['name']}")
+            print(f"    ${p['price']:>8.2f}  [{p['category_slug']}]  {p['name']}")
 
     finally:
         db.close()
